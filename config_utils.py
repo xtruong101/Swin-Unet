@@ -1,6 +1,6 @@
 """
-config_utils.py - SỬA LỖI HIỂN THỊ ĐƯỜNG DẪN ĐẦY ĐỦ
-===============================================
+config_utils.py - Kiểm tra config training cho Swin-Unet
+Hỗ trợ Synapse: CHỈ CÓ train.txt, KHÔNG có val.txt
 """
 
 import os
@@ -39,20 +39,17 @@ class ConfigDisplay:
             print(f"{'='*80}")
     
     def print_section(self, section_name, items_dict):
-        """In một section config - ĐÃ CẢI TIẾN"""
+        """In một section config"""
         if self.use_rich:
-            # SỬ DỤNG CONSOLE.PRINT THAY VÌ TABLE ĐỂ HIỂN THỊ ĐẦY ĐỦ
             self.console.print(f"\n[bold cyan]{section_name}[/bold cyan]")
             self.console.print("─" * 100)
             
             for key, value in items_dict.items():
-                # In key và value mà không cắt ngắn
                 value_str = str(value)
                 self.console.print(f"[green]{key:<30}[/green] [yellow]{value_str}[/yellow]")
             
             self.console.print("─" * 100)
         else:
-            # Sử dụng print bình thường
             print(f"\n{section_name}")
             print("-" * 100)
             for key, value in items_dict.items():
@@ -92,7 +89,7 @@ class ConfigDisplay:
 
 
 def check_paths(args):
-    """Kiểm tra các đường dẫn"""
+    """Kiểm tra các đường dẫn - SYNAPSE CHỈ CẦN train.txt"""
     issues = []
     
     # Kiểm tra list_dir
@@ -100,7 +97,7 @@ def check_paths(args):
     if not os.path.exists(list_dir):
         issues.append(f"List directory không tồn tại: {list_dir}")
     else:
-        # Kiểm tra train.txt
+        # ✅ Kiểm tra train.txt (BẮT BUỘC)
         train_txt = os.path.join(list_dir, "train.txt")
         if not os.path.exists(train_txt):
             issues.append(f"train.txt không tồn tại: {train_txt}")
@@ -110,10 +107,10 @@ def check_paths(args):
             if train_lines == 0:
                 issues.append("train.txt rỗng")
         
-        # Kiểm tra val.txt
+        # ℹ️ Kiểm tra val.txt (KHÔNG BẮT BUỘC cho Synapse)
         val_txt = os.path.join(list_dir, "val.txt")
         if not os.path.exists(val_txt):
-            issues.append(f"val.txt không tồn tại: {val_txt}")
+            print(f"ℹ️  val.txt không tồn tại (bình thường cho Synapse): {val_txt}")
     
     # Kiểm tra root_path
     root_path = args.root_path
@@ -237,7 +234,8 @@ def display_training_config(args, config=None):
             for issue in param_issues:
                 display.print_warning(issue)
         
-        if any("không tồn tại" in issue.lower() or "error" in issue.lower() for issue in all_issues):
+        # ✅ CHỈ CÓ LỖI NGHIÊM TRỌNG nếu root_path hoặc train.txt không tồn tại
+        if any("root_path không tồn tại" in issue.lower() or "train.txt" in issue.lower() for issue in all_issues):
             print("\n" + "="*100)
             print("❌ LỖI NGHIÊM TRỌNG - KHÔNG THỂ TRAIN".center(100))
             print("Vui lòng sửa các lỗi trên trước khi training".center(100))
