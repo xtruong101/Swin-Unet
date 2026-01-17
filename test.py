@@ -62,11 +62,17 @@ parser.add_argument('--throughput', action='store_true', help='Test throughput o
 parser.add_argument("--n_class", default=4, type=int)
 parser.add_argument("--split_name", default="test", help="Directory of the input list")
 
+# them parser arguments cho volume path
+parser.add_argument("--volume_path", default="", help="Directory of the input volume data")
+
 args = parser.parse_args()
 
 if args.dataset == "Synapse":
     args.volume_path = os.path.join(args.volume_path, "test_vol_h5")
 config = get_config(args)
+
+# if dataset is Synapse then use this function to inference on test set
+# volume_path is the path to the test volumes, for my case it is /content/project_TransUNet/data/Synapse/test_vol_h5
 
 
 def inference(args, model, test_save_path=None):

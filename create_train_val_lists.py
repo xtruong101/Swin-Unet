@@ -92,11 +92,11 @@ python train.py \\
   --cfg configs/swin_tiny_patch4_window7_224_lite.yaml \\
   --root_path {root_path} \\
   --list_dir {list_dir} \\
-  --max_epochs 150 \\
+  --max_epochs 'your number of epochs' \\
   --output_dir ./outputs/swin_unet \\
   --img_size 224 \\
   --base_lr 0.05 \\
-  --batch_size 24
+  --batch_size 'your batch size'
 """)
     
     return True
