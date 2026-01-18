@@ -59,7 +59,9 @@ def calculate_metric_percase(pred, gt):
 
 
 def test_single_volume(image, label, net, classes, patch_size=[256, 256], test_save_path=None, case=None, z_spacing=1):
-    print("DEBUG types:", type(image), type(label)) try: print("DEBUG shapes:", getattr(image, 'shape', None), getattr(label, 'shape', None)) except: pass
+    print("DEBUG types:", type(image), type(label)) 
+    try: print("DEBUG shapes:", getattr(image, 'shape', None), getattr(label, 'shape', None)) 
+    except: pass
     image, label = image.squeeze(0).cpu().detach().numpy().squeeze(0), label.squeeze(0).cpu().detach().numpy().squeeze(0)
     if len(image.shape) == 3:
         prediction = np.zeros_like(label)
