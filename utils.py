@@ -62,7 +62,30 @@ def test_single_volume(image, label, net, classes, patch_size=[256, 256], test_s
     print("DEBUG types:", type(image), type(label)) 
     try: print("DEBUG shapes:", getattr(image, 'shape', None), getattr(label, 'shape', None)) 
     except: pass
-    image, label = image.squeeze(0).cpu().detach().numpy().squeeze(0), label.squeeze(0).cpu().detach().numpy().squeeze(0)
+    # ---- START: safe conversion from tensor -> numpy and handle batch dim ----
+    # convert image to numpy (works if already numpy)
+    if hasattr(image, 'cpu'):
+        image_np = image.cpu().detach().numpy()
+    else:
+        image_np = np.asarray(image)
+
+    # convert label to numpy if provided
+    if label is not None:
+        if hasattr(label, 'cpu'):
+            label_np = label.cpu().detach().numpy()
+        else:
+            label_np = np.asarray(label)
+    else:
+        label_np = None
+
+    # If dataloader provided a batch dimension (B, D, H, W), take the first sample
+    if image_np.ndim == 4:
+        image_np = image_np[0]
+    if label_np is not None and label_np.ndim == 4:
+        label_np = label_np[0]
+
+    image, label = image_np, label_np
+    # ---- END: safe conversion ----
     if len(image.shape) == 3:
         prediction = np.zeros_like(label)
         for ind in range(image.shape[0]):
