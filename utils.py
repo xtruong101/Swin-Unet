@@ -128,24 +128,7 @@ def calculate_metric_percase(pred, gt):
 #     return metric_list
 
 def test_single_volume(image, label, net, classes, patch_size=[256, 256], test_save_path=None, case=None, z_spacing=1):
-    # Robustly convert torch tensors to numpy and remove only batch/channel dims of size 1
-    def to_numpy_and_squeeze(x):
-        # if input is a torch tensor
-        if hasattr(x, 'cpu'):
-            arr = x.cpu().detach().numpy()
-        else:
-            arr = np.array(x)
-        # remove leading batch dim if present and equal to 1
-        if arr.ndim >= 1 and arr.shape[0] == 1:
-            arr = arr[0]
-        # if after removing batch we still have a leading channel dim equal to 1, remove it
-        if arr.ndim >= 1 and arr.shape[0] == 1:
-            arr = arr[0]
-        return arr
-
-    image = to_numpy_and_squeeze(image)
-    label = to_numpy_and_squeeze(label)
-
+    image, label = image.squeeze(0).cpu().detach().numpy().squeeze(0), label.squeeze(0).cpu().detach().numpy().squeeze(0)
     if len(image.shape) == 3:
         prediction = np.zeros_like(label)
         for ind in range(image.shape[0]):
