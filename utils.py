@@ -281,20 +281,43 @@ def test_single_volume(image, label, net, classes, patch_size=[256, 256], test_s
     print(f"Image dtype: {image.dtype}, Label dtype: {label.dtype}")
     print(f"Image range: [{image.min()}, {image.max()}]")
     print(f"Label unique: {np.unique(label)}")
+    print(f"Patch size: {patch_size}")
     
     if len(image.shape) == 3 and image.shape[0] > 0:
         prediction = np.zeros_like(label)
         for ind in range(image.shape[0]):
             slice = image[ind, :, :]
             x, y = slice.shape[0], slice.shape[1]
+            
+            # Resize nếu cần
             if x != patch_size[0] or y != patch_size[1]:
                 slice = zoom(slice, (patch_size[0] / x, patch_size[1] / y), order=3)
+            
             input = torch.from_numpy(slice).unsqueeze(0).unsqueeze(0).float().cuda()
             net.eval()
+            
             with torch.no_grad():
                 outputs = net(input)
-                out = torch.argmax(torch.softmax(outputs, dim=1), dim=1).squeeze(0)
+                
+                # DEBUG: In output trước softmax
+                if ind == 0:
+                    print(f"  Slice 0 - Outputs shape: {outputs.shape}, range: [{outputs.min():.4f}, {outputs.max():.4f}]")
+                    print(f"  Outputs dtype: {outputs.dtype}")
+                
+                softmax_out = torch.softmax(outputs, dim=1)
+                if ind == 0:
+                    print(f"  After softmax - shape: {softmax_out.shape}, range: [{softmax_out.min():.4f}, {softmax_out.max():.4f}]")
+                    # In top 3 classes với xác suất cao nhất
+                    top_probs, top_classes = torch.topk(softmax_out, 3, dim=1)
+                    print(f"  Top 3 classes: {top_classes[0]}, probs: {top_probs[0]}")
+                
+                out = torch.argmax(softmax_out, dim=1).squeeze(0)
                 out = out.cpu().detach().numpy()
+                
+                if ind == 0:
+                    print(f"  After argmax - shape: {out.shape}, unique: {np.unique(out)}")
+                
+                # Resize lại nếu cần
                 if x != patch_size[0] or y != patch_size[1]:
                     pred = zoom(out, (x / patch_size[0], y / patch_size[1]), order=0)
                 else:
