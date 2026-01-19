@@ -80,47 +80,31 @@ if __name__ == "__main__":
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed(args.seed)
 
-    # dataset_name = args.dataset
-    # dataset_config = {
-    #     args.dataset: {
-    #         'root_path': args.root_path,
-    #         'list_dir': f'./lists/{args.dataset}',
-    #         'num_classes': args.n_class,
-    #     },
-    # }
-
-
     dataset_name = args.dataset
-    dataset_config = {
-        args.dataset: {
-            'root_path': args.root_path,
-            'list_dir': f'./lists/{args.dataset}',
-            'num_classes': args.num_classes,  # ← SỬA: Đổi args.n_class → args.num_classes (quan trọng!)
-        },
-    }
     if args.batch_size != 24 and args.batch_size % 6 == 0:
         args.base_lr *= args.batch_size / 24
-    args.num_classes = dataset_config[dataset_name]['num_classes']
-    args.root_path = dataset_config[dataset_name]['root_path']
-    args.list_dir = dataset_config[dataset_name]['list_dir']
     
-    # ============================================================================
-    # ← THÊM PHẦN NÀY: HIỂN THỊ VÀ KIỂM TRA CONFIG
-    # ============================================================================
-    if not validate_before_training(args, config):
-        import sys
-        print("\nTraining stopped due to configuration errors")
-        sys.exit(1)
-    
-    print("\nInitializing model...\n")
+    print("\n=== Training Configuration ===")
+    print(f"Dataset: {dataset_name}")
+    print(f"Root path: {args.root_path}")
+    print(f"List dir: {args.list_dir}")
+    print(f"Num classes: {args.num_classes}")
+    print(f"Max epochs: {args.max_epochs}")
+    print(f"Batch size: {args.batch_size}")
+    print(f"Base learning rate: {args.base_lr}")
+    print(f"Image size: {args.img_size}")
+    print("="*30 + "\n")
 
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
+    
+    print("Initializing model...")
     net = ViT_seg(config, img_size=args.img_size, num_classes=args.num_classes).cuda()
     net.load_from(config)
+    print("Model initialized successfully!\n")
 
-    # trainer = {'Synapse': trainer_synapse}
+    print("Starting training...\n")
     trainer_synapse(args, net, args.output_dir)
 
 

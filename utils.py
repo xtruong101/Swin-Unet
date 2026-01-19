@@ -302,20 +302,14 @@ def test_single_volume(image, label, net, classes, patch_size=[256, 256], test_s
                 # DEBUG: In output trước softmax
                 if ind == 0:
                     print(f"  Slice 0 - Outputs shape: {outputs.shape}, range: [{outputs.min():.4f}, {outputs.max():.4f}]")
-                    print(f"  Outputs dtype: {outputs.dtype}")
-                
-                softmax_out = torch.softmax(outputs, dim=1)
-                if ind == 0:
-                    print(f"  After softmax - shape: {softmax_out.shape}, range: [{softmax_out.min():.4f}, {softmax_out.max():.4f}]")
-                    # In top 3 classes với xác suất cao nhất
-                    top_probs, top_classes = torch.topk(softmax_out, 3, dim=1)
-                    print(f"  Top 3 classes: {top_classes[0]}, probs: {top_probs[0]}")
+                    softmax_out = torch.softmax(outputs, dim=1)
+                    out_pred = torch.argmax(softmax_out, dim=1).squeeze(0)
+                    print(f"  Prediction unique classes: {torch.unique(out_pred).cpu().numpy()}")
+                else:
+                    softmax_out = torch.softmax(outputs, dim=1)
                 
                 out = torch.argmax(softmax_out, dim=1).squeeze(0)
                 out = out.cpu().detach().numpy()
-                
-                if ind == 0:
-                    print(f"  After argmax - shape: {out.shape}, unique: {np.unique(out)}")
                 
                 # Resize lại nếu cần
                 if x != patch_size[0] or y != patch_size[1]:
