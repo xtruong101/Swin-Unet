@@ -28,7 +28,8 @@ def trainer_synapse(args, model, snapshot_path):
     db_train = Synapse_dataset(base_dir=args.root_path, list_dir=args.list_dir, split="train",
                                transform=transforms.Compose(
                                    [RandomGenerator(output_size=[args.img_size, args.img_size])]))
-    db_val = Synapse_dataset(base_dir=args.root_path, list_dir=args.list_dir, split="val",
+    # Using only training data (no validation split)
+    db_val = Synapse_dataset(base_dir=args.root_path, list_dir=args.list_dir, split="train",
                              transform=transforms.Compose(
                                  [RandomGenerator(output_size=[args.img_size, args.img_size])]))
     print("The length of train set is: {}".format(len(db_train)))
@@ -96,34 +97,12 @@ def trainer_synapse(args, model, snapshot_path):
         batch_loss = 0.4 * batch_ce_loss + 0.6 * batch_dice_loss
         logging.info('Train epoch: %d : loss : %f, loss_ce: %f, loss_dice: %f' % (
             epoch_num, batch_loss, batch_ce_loss, batch_dice_loss))
+        
+        # Save model every eval_interval epochs (skip validation)
         if (epoch_num + 1) % args.eval_interval == 0:
-            model.eval()
-            batch_dice_loss = 0
-            batch_ce_loss = 0
-            with torch.no_grad():
-                for i_batch, sampled_batch in tqdm(enumerate(val_loader), desc=f"Val: {epoch_num}",
-                                                   total=len(val_loader), leave=False):
-                    image_batch, label_batch = sampled_batch['image'], sampled_batch['label']
-                    image_batch, label_batch = image_batch.cuda(), label_batch.cuda()
-                    outputs = model(image_batch)
-                    loss_ce = ce_loss(outputs, label_batch[:].long())
-                    loss_dice = dice_loss(outputs, label_batch, softmax=True)
-                    batch_dice_loss += loss_dice.item()
-                    batch_ce_loss += loss_ce.item()
-
-                batch_ce_loss /= len(val_loader)
-                batch_dice_loss /= len(val_loader)
-                batch_loss = 0.4 * batch_ce_loss + 0.6 * batch_dice_loss
-                logging.info('Val epoch: %d : loss : %f, loss_ce: %f, loss_dice: %f' % (
-                    epoch_num, batch_loss, batch_ce_loss, batch_dice_loss))
-                if batch_loss < best_loss:
-                    save_mode_path = os.path.join(snapshot_path, 'best_model.pth')
-                    torch.save(model.state_dict(), save_mode_path)
-                    best_loss = batch_loss
-                else:
-                    save_mode_path = os.path.join(snapshot_path, 'last_model.pth')
-                    torch.save(model.state_dict(), save_mode_path)
-                logging.info("save model to {}".format(save_mode_path))
+            save_mode_path = os.path.join(snapshot_path, f'epoch_{epoch_num+1}_model.pth')
+            torch.save(model.state_dict(), save_mode_path)
+            logging.info("save model to {}".format(save_mode_path))
 
     writer.close()
     return "Training Finished!"
