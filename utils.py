@@ -230,15 +230,65 @@ def calculate_metric_percase(pred, gt):
         return 0, 0
 
 
+# def test_single_volume(image, label, net, classes, patch_size=[256, 256], test_save_path=None, case=None, z_spacing=1):
+#     image, label = image.squeeze().cpu().detach().numpy(), label.squeeze().cpu().detach().numpy()
+#     if len(image.shape) == 3:
+#         prediction = np.zeros_like(label)
+#         for ind in range(image.shape[0]):
+#             slice = image[ind, :, :]
+#             x, y = slice.shape[0], slice.shape[1]
+#             if x != patch_size[0] or y != patch_size[1]:
+#                 slice = zoom(slice, (patch_size[0] / x, patch_size[1] / y), order=3)  # previous using 0
+#             input = torch.from_numpy(slice).unsqueeze(0).unsqueeze(0).float().cuda()
+#             net.eval()
+#             with torch.no_grad():
+#                 outputs = net(input)
+#                 out = torch.argmax(torch.softmax(outputs, dim=1), dim=1).squeeze(0)
+#                 out = out.cpu().detach().numpy()
+#                 if x != patch_size[0] or y != patch_size[1]:
+#                     pred = zoom(out, (x / patch_size[0], y / patch_size[1]), order=0)
+#                 else:
+#                     pred = out
+#                 prediction[ind] = pred
+#     else:
+#         input = torch.from_numpy(image).unsqueeze(
+#             0).unsqueeze(0).float().cuda()
+#         net.eval()
+#         with torch.no_grad():
+#             out = torch.argmax(torch.softmax(net(input), dim=1), dim=1).squeeze(0)
+#             prediction = out.cpu().detach().numpy()
+#     metric_list = []
+#     for i in range(1, classes):
+#         metric_list.append(calculate_metric_percase(prediction == i, label == i))
+#
+#     if test_save_path is not None:
+#         img_itk = sitk.GetImageFromArray(image.astype(np.float32))
+#         prd_itk = sitk.GetImageFromArray(prediction.astype(np.float32))
+#         lab_itk = sitk.GetImageFromArray(label.astype(np.float32))
+#         img_itk.SetSpacing((1, 1, z_spacing))
+#         prd_itk.SetSpacing((1, 1, z_spacing))
+#         lab_itk.SetSpacing((1, 1, z_spacing))
+#         sitk.WriteImage(prd_itk, test_save_path + '/'+case + "_pred.nii.gz")
+#         sitk.WriteImage(img_itk, test_save_path + '/'+ case + "_img.nii.gz")
+#         sitk.WriteImage(lab_itk, test_save_path + '/'+ case + "_gt.nii.gz")
+#     return metric_list
+
 def test_single_volume(image, label, net, classes, patch_size=[256, 256], test_save_path=None, case=None, z_spacing=1):
     image, label = image.squeeze().cpu().detach().numpy(), label.squeeze().cpu().detach().numpy()
-    if len(image.shape) == 3:
+    
+    print(f"\n=== DEBUG {case} ===")
+    print(f"Image shape: {image.shape}, Label shape: {label.shape}")
+    print(f"Image dtype: {image.dtype}, Label dtype: {label.dtype}")
+    print(f"Image range: [{image.min()}, {image.max()}]")
+    print(f"Label unique: {np.unique(label)}")
+    
+    if len(image.shape) == 3 and image.shape[0] > 0:
         prediction = np.zeros_like(label)
         for ind in range(image.shape[0]):
             slice = image[ind, :, :]
             x, y = slice.shape[0], slice.shape[1]
             if x != patch_size[0] or y != patch_size[1]:
-                slice = zoom(slice, (patch_size[0] / x, patch_size[1] / y), order=3)  # previous using 0
+                slice = zoom(slice, (patch_size[0] / x, patch_size[1] / y), order=3)
             input = torch.from_numpy(slice).unsqueeze(0).unsqueeze(0).float().cuda()
             net.eval()
             with torch.no_grad():
@@ -250,16 +300,25 @@ def test_single_volume(image, label, net, classes, patch_size=[256, 256], test_s
                 else:
                     pred = out
                 prediction[ind] = pred
-    else:
-        input = torch.from_numpy(image).unsqueeze(
-            0).unsqueeze(0).float().cuda()
+    elif len(image.shape) == 2:
+        input = torch.from_numpy(image).unsqueeze(0).unsqueeze(0).float().cuda()
         net.eval()
         with torch.no_grad():
             out = torch.argmax(torch.softmax(net(input), dim=1), dim=1).squeeze(0)
             prediction = out.cpu().detach().numpy()
+    else:
+        raise ValueError(f"Invalid image shape: {image.shape}")
+    
+    print(f"Prediction unique: {np.unique(prediction)}")
+    print(f"Prediction shape: {prediction.shape}")
+    
     metric_list = []
     for i in range(1, classes):
-        metric_list.append(calculate_metric_percase(prediction == i, label == i))
+        pred_mask = (prediction == i)
+        label_mask = (label == i)
+        metric_val = calculate_metric_percase(pred_mask.copy(), label_mask.copy())
+        print(f"  Class {i}: pred sum={np.sum(pred_mask)}, label sum={np.sum(label_mask)}, metric={metric_val}")
+        metric_list.append(metric_val)
 
     if test_save_path is not None:
         img_itk = sitk.GetImageFromArray(image.astype(np.float32))
