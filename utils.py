@@ -21,12 +21,14 @@ class DiceLoss(nn.Module):
 
     def _dice_loss(self, score, target):
         target = target.float()
-        smooth = 1e-5
+        smooth = 1e-4
         intersect = torch.sum(score * target)
         y_sum = torch.sum(target * target)
         z_sum = torch.sum(score * score)
         dice = (2 * intersect + smooth) / (z_sum + y_sum + smooth)
         loss = 1 - dice
+        # Apply focal term to hard negatives: (1-dice)^2 for stronger gradient
+        loss = loss ** 1.5  # Focal Dice loss
         return loss
 
     def forward(self, inputs, target, weight=None, softmax=False):
@@ -34,7 +36,16 @@ class DiceLoss(nn.Module):
             inputs = torch.softmax(inputs, dim=1)
         target = self._one_hot_encoder(target)
         if weight is None:
-            weight = [1] * self.n_classes
+            # Calculate inverse frequency weighting for class imbalance
+            weight = []
+            total_pixels = target.shape[0] * target.shape[2] * target.shape[3]
+            for i in range(self.n_classes):
+                class_pixels = torch.sum(target[:, i]).item()
+                if class_pixels > 0:
+                    weight.append(total_pixels / (self.n_classes * class_pixels))
+                else:
+                    weight.append(1.0)
+        
         assert inputs.size() == target.size(), 'predict {} & target {} shape do not match'.format(inputs.size(), target.size())
         class_wise_dice = []
         loss = 0.0
