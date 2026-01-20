@@ -15,6 +15,7 @@ parser.add_argument('--dataset', type=str,
                     default='Synapse', help='experiment_name')
 parser.add_argument('--list_dir', type=str,
                     default='./lists/lists_Synapse', help='list dir')
+# number of classes for Synapse dataset default is 9
 parser.add_argument('--num_classes', type=int,
                     default=9, help='output channel of network')
 parser.add_argument('--output_dir', type=str, help='output dir')
@@ -56,9 +57,6 @@ parser.add_argument('--eval', action='store_true', help='Perform evaluation only
 parser.add_argument('--throughput', action='store_true', help='Test throughput only')
 # parser.add_argument("--dataset_name", default="datasets")
 parser.add_argument("--n_class", default=4, type=int)
-# add num_classes for dataset like Synapse
-parser.add_argument("--num_classes", default=9, type=int)
-
 parser.add_argument("--num_workers", default=8, type=int)
 parser.add_argument("--eval_interval", default=1, type=int)
 
