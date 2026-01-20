@@ -55,7 +55,7 @@ def trainer_synapse(args, model, snapshot_path):
     max_iterations = args.max_epochs * len(train_loader)  # max_epoch = max_iterations // len(trainloader) + 1
     logging.info("{} iterations per epoch. {} max iterations ".format(len(train_loader), max_iterations))
     print("{} iterations per epoch. {} max iterations".format(len(train_loader), max_iterations))
-    iterator = tqdm(range(max_epoch), ncols=120, desc="Training")
+    iterator = tqdm(range(max_epoch), desc="Training")
     best_loss = 10e10
     train_ce_loss_epoch = 0
     train_dice_loss_epoch = 0
