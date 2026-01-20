@@ -56,6 +56,9 @@ parser.add_argument('--eval', action='store_true', help='Perform evaluation only
 parser.add_argument('--throughput', action='store_true', help='Test throughput only')
 # parser.add_argument("--dataset_name", default="datasets")
 parser.add_argument("--n_class", default=4, type=int)
+# add num_classes for dataset like Synapse
+parser.add_argument("--num_classes", default=9, type=int)
+
 parser.add_argument("--num_workers", default=8, type=int)
 parser.add_argument("--eval_interval", default=1, type=int)
 
@@ -82,7 +85,7 @@ if __name__ == "__main__":
         args.dataset: {
             'root_path': args.root_path,
             'list_dir': f'./lists/{args.dataset}',
-            'num_classes': args.n_class,
+            'num_classes': args.num_class if args.num_class > 0 else args.n_class,
         },
     }
 
