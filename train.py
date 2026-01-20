@@ -93,6 +93,8 @@ if __name__ == "__main__":
     # Keep user-provided list_dir if it exists, otherwise use default
     if not args.list_dir or args.list_dir == './lists/lists_Synapse':
         args.list_dir = dataset_config[dataset_name]['list_dir']
+    # Update n_class to match num_classes (for DiceLoss)
+    args.n_class = args.num_classes
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
