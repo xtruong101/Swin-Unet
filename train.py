@@ -90,7 +90,9 @@ if __name__ == "__main__":
         args.base_lr *= args.batch_size / 24
     args.num_classes = dataset_config[dataset_name]['num_classes']
     args.root_path = dataset_config[dataset_name]['root_path']
-    args.list_dir = dataset_config[dataset_name]['list_dir']
+    # Keep user-provided list_dir if it exists, otherwise use default
+    if not args.list_dir or args.list_dir == './lists/lists_Synapse':
+        args.list_dir = dataset_config[dataset_name]['list_dir']
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
