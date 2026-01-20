@@ -31,7 +31,7 @@ def trainer_synapse(args, model, snapshot_path):
     db_val = Synapse_dataset(base_dir=args.root_path, list_dir=args.list_dir, split="val",
                              transform=transforms.Compose(
                                  [RandomGenerator(output_size=[args.img_size, args.img_size])]))
-    print("The length of train set is: {}".format(len(db_train)))
+    logging.info("The length of train set is: {}".format(len(db_train)))
 
     def worker_init_fn(worker_id):
         random.seed(args.seed + worker_id)
@@ -53,14 +53,16 @@ def trainer_synapse(args, model, snapshot_path):
     max_epoch = args.max_epochs
     max_iterations = args.max_epochs * len(train_loader)  # max_epoch = max_iterations // len(trainloader) + 1
     logging.info("{} iterations per epoch. {} max iterations ".format(len(train_loader), max_iterations))
-    iterator = tqdm(range(max_epoch), ncols=70)
+    iterator = tqdm(range(max_epoch), ncols=70, desc="Training")
     best_loss = 10e10
+    train_ce_loss_epoch = 0
+    train_dice_loss_epoch = 0
     for epoch_num in iterator:
         model.train()
         batch_dice_loss = 0
         batch_ce_loss = 0
-        for i_batch, sampled_batch in tqdm(enumerate(train_loader), desc=f"Train: {epoch_num}", total=len(train_loader),
-                                           leave=False):
+        for i_batch, sampled_batch in tqdm(enumerate(train_loader), total=len(train_loader),
+                                           leave=False, disable=True):
             image_batch, label_batch = sampled_batch['image'], sampled_batch['label']
             image_batch, label_batch = image_batch.cuda(), label_batch.cuda()
             outputs = model(image_batch)
@@ -94,15 +96,21 @@ def trainer_synapse(args, model, snapshot_path):
         batch_ce_loss /= len(train_loader)
         batch_dice_loss /= len(train_loader)
         batch_loss = 0.4 * batch_ce_loss + 0.6 * batch_dice_loss
+        train_ce_loss_epoch = batch_ce_loss
+        train_dice_loss_epoch = batch_dice_loss
         logging.info('Train epoch: %d : loss : %f, loss_ce: %f, loss_dice: %f' % (
             epoch_num, batch_loss, batch_ce_loss, batch_dice_loss))
+        
+        val_loss = None
+        val_ce_loss_epoch = None
+        val_dice_loss_epoch = None
         if (epoch_num + 1) % args.eval_interval == 0:
             model.eval()
             batch_dice_loss = 0
             batch_ce_loss = 0
             with torch.no_grad():
-                for i_batch, sampled_batch in tqdm(enumerate(val_loader), desc=f"Val: {epoch_num}",
-                                                   total=len(val_loader), leave=False):
+                for i_batch, sampled_batch in tqdm(enumerate(val_loader), total=len(val_loader), 
+                                                   leave=False, disable=True):
                     image_batch, label_batch = sampled_batch['image'], sampled_batch['label']
                     image_batch, label_batch = image_batch.cuda(), label_batch.cuda()
                     outputs = model(image_batch)
@@ -114,6 +122,9 @@ def trainer_synapse(args, model, snapshot_path):
                 batch_ce_loss /= len(val_loader)
                 batch_dice_loss /= len(val_loader)
                 batch_loss = 0.4 * batch_ce_loss + 0.6 * batch_dice_loss
+                val_loss = batch_loss
+                val_ce_loss_epoch = batch_ce_loss
+                val_dice_loss_epoch = batch_dice_loss
                 logging.info('Val epoch: %d : loss : %f, loss_ce: %f, loss_dice: %f' % (
                     epoch_num, batch_loss, batch_ce_loss, batch_dice_loss))
                 if batch_loss < best_loss:
@@ -124,6 +135,15 @@ def trainer_synapse(args, model, snapshot_path):
                     save_mode_path = os.path.join(snapshot_path, 'last_model.pth')
                     torch.save(model.state_dict(), save_mode_path)
                 logging.info("save model to {}".format(save_mode_path))
+        
+        # Hiển thị metrics trên progress bar
+        if val_loss is not None:
+            iterator.set_postfix({'TrL': f'{0.4*train_ce_loss_epoch+0.6*train_dice_loss_epoch:.4f}', 
+                                  'TrCE': f'{train_ce_loss_epoch:.4f}', 
+                                  'TrDice': f'{train_dice_loss_epoch:.4f}',
+                                  'VaL': f'{val_loss:.4f}', 
+                                  'VaCE': f'{val_ce_loss_epoch:.4f}', 
+                                  'VaDice': f'{val_dice_loss_epoch:.4f}'})
 
     writer.close()
     return "Training Finished!"
