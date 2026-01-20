@@ -31,6 +31,8 @@ def trainer_synapse(args, model, snapshot_path):
                              transform=transforms.Compose(
                                  [RandomGenerator(output_size=[args.img_size, args.img_size])]))
     logging.info("The length of train set is: {}".format(len(db_train)))
+    print("The length of train set is: {}".format(len(db_train)))
+    print("The length of val set is: {}".format(len(db_val)))
 
     def worker_init_fn(worker_id):
         random.seed(args.seed + worker_id)
@@ -52,11 +54,14 @@ def trainer_synapse(args, model, snapshot_path):
     max_epoch = args.max_epochs
     max_iterations = args.max_epochs * len(train_loader)  # max_epoch = max_iterations // len(trainloader) + 1
     logging.info("{} iterations per epoch. {} max iterations ".format(len(train_loader), max_iterations))
-    iterator = tqdm(range(max_epoch), ncols=70, desc="Training")
+    print("{} iterations per epoch. {} max iterations".format(len(train_loader), max_iterations))
+    iterator = tqdm(range(max_epoch), ncols=120, desc="Training")
     best_loss = 10e10
     train_ce_loss_epoch = 0
     train_dice_loss_epoch = 0
     for epoch_num in iterator:
+        actual_epoch = epoch_num + 1  # Hiển thị epoch từ 1 thay vì 0
+        iterator.set_description(f"Training {actual_epoch}/{max_epoch}")
         model.train()
         batch_dice_loss = 0
         batch_ce_loss = 0
@@ -135,14 +140,15 @@ def trainer_synapse(args, model, snapshot_path):
                     torch.save(model.state_dict(), save_mode_path)
                 logging.info("save model to {}".format(save_mode_path))
         
-        # Hiển thị metrics trên progress bar
+        # Hiển thị metrics trên progress bar mỗi epoch
+        postfix_dict = {'loss': f'{0.4*train_ce_loss_epoch+0.6*train_dice_loss_epoch:.4f}', 
+                        'loss_ce': f'{train_ce_loss_epoch:.4f}', 
+                        'loss_dice': f'{train_dice_loss_epoch:.4f}'}
         if val_loss is not None:
-            iterator.set_postfix({'loss': f'{0.4*train_ce_loss_epoch+0.6*train_dice_loss_epoch:.4f}', 
-                                  'loss_ce': f'{train_ce_loss_epoch:.4f}', 
-                                  'loss_dice': f'{train_dice_loss_epoch:.4f}',
-                                  'val_loss': f'{val_loss:.4f}', 
-                                  'val_ce': f'{val_ce_loss_epoch:.4f}', 
-                                  'val_dice': f'{val_dice_loss_epoch:.4f}'})
+            postfix_dict['val_loss'] = f'{val_loss:.4f}'
+            postfix_dict['val_ce'] = f'{val_ce_loss_epoch:.4f}'
+            postfix_dict['val_dice'] = f'{val_dice_loss_epoch:.4f}'
+        iterator.set_postfix(postfix_dict)
 
     writer.close()
     return "Training Finished!"
