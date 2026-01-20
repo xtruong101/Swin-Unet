@@ -19,7 +19,6 @@ def trainer_synapse(args, model, snapshot_path):
     from datasets.dataset_synapse import Synapse_dataset, RandomGenerator
     logging.basicConfig(filename=snapshot_path + "/log.txt", level=logging.INFO,
                         format='[%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S')
-    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
     logging.info(str(args))
     base_lr = args.base_lr
     num_classes = args.num_classes
@@ -138,12 +137,12 @@ def trainer_synapse(args, model, snapshot_path):
         
         # Hiển thị metrics trên progress bar
         if val_loss is not None:
-            iterator.set_postfix({'TrL': f'{0.4*train_ce_loss_epoch+0.6*train_dice_loss_epoch:.4f}', 
-                                  'TrCE': f'{train_ce_loss_epoch:.4f}', 
-                                  'TrDice': f'{train_dice_loss_epoch:.4f}',
-                                  'VaL': f'{val_loss:.4f}', 
-                                  'VaCE': f'{val_ce_loss_epoch:.4f}', 
-                                  'VaDice': f'{val_dice_loss_epoch:.4f}'})
+            iterator.set_postfix({'loss': f'{0.4*train_ce_loss_epoch+0.6*train_dice_loss_epoch:.4f}', 
+                                  'loss_ce': f'{train_ce_loss_epoch:.4f}', 
+                                  'loss_dice': f'{train_dice_loss_epoch:.4f}',
+                                  'val_loss': f'{val_loss:.4f}', 
+                                  'val_ce': f'{val_ce_loss_epoch:.4f}', 
+                                  'val_dice': f'{val_dice_loss_epoch:.4f}'})
 
     writer.close()
     return "Training Finished!"
