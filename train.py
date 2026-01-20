@@ -83,7 +83,7 @@ if __name__ == "__main__":
         args.dataset: {
             'root_path': args.root_path,
             'list_dir': f'./lists/{args.dataset}',
-            'num_classes': args.num_class if args.num_class > 0 else args.n_class,
+            'num_classes': args.num_classes if args.num_classes > 0 else args.n_class,
         },
     }
 
