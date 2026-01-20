@@ -109,14 +109,13 @@ if __name__ == "__main__":
     dataset_config = {
         args.dataset: {
             'root_path': args.root_path,
-            'list_dir': f'./lists/{args.dataset}',
+            'list_dir': args.list_dir,
             'num_classes': args.n_class,
             "z_spacing": 1
         },
     }
     args.num_classes = dataset_config[dataset_name]['num_classes']
     # args.Dataset = dataset_config[dataset_name]['Dataset']
-    args.list_dir = dataset_config[dataset_name]['list_dir']
     args.z_spacing = dataset_config[dataset_name]['z_spacing']
     args.is_pretrain = True
 
