@@ -1,0 +1,17 @@
+# Swin-Unet config for ACDC dataset
+MODEL:
+  TYPE: 'swin'
+  NAME: 'swin_tiny_patch4_window7_224'
+  NUM_CLASSES: 4
+  PRETRAIN_CKPT: './pretrained_ckpt/swin_tiny_patch4_window7_224.pth'
+
+DATA:
+  BATCH_SIZE: 6
+  IMG_SIZE: 224
+  DATASET: 'ACDC'
+
+TRAIN:
+  EPOCHS: 5
+  WARMUP_EPOCHS: 20
+  BASE_LR: 0.05
+  WEIGHT_DECAY: 0.0001

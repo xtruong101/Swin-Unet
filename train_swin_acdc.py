@@ -69,10 +69,6 @@ if __name__ == "__main__":
 
     # Load config
     config = get_config(args)
-
-    # Update config for ACDC
-    config.MODEL.NUM_CLASSES = args.num_classes
-    config.DATA.IMG_SIZE = args.img_size
     
     # Create output directory
     if args.output_dir is None:
