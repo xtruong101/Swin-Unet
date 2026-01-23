@@ -43,6 +43,13 @@ parser.add_argument('--cache-mode', type=str, default='part', choices=['no', 'fu
                     help='no: no cache, full: cache all data, part: sharding the dataset')
 parser.add_argument('--resume', help='resume from checkpoint')
 parser.add_argument('--accumulation-steps', type=int, help="gradient accumulation steps")
+parser.add_argument('--use-checkpoint', action='store_true',
+                    help='whether use gradient checkpointing to save memory')
+parser.add_argument('--amp-opt-level', type=str, default='O1', choices=['O0', 'O1', 'O2'],
+                    help='mixed precision opt level, if O0 then no amp, if O1 then amp')
+parser.add_argument('--tag', help='tag of experiment')
+parser.add_argument('--eval', action='store_true', help='Perform evaluation only')
+parser.add_argument('--throughput', action='store_true', help='Test throughput only')
 
 args = parser.parse_args()
 
