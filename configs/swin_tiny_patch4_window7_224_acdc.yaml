@@ -1,4 +1,5 @@
 # Swin-Unet config for ACDC dataset
+# This config have not validated yet!
 MODEL:
   TYPE: 'swin'
   NAME: 'swin_tiny_patch4_window7_224'
@@ -15,3 +16,4 @@ TRAIN:
   WARMUP_EPOCHS: 20
   BASE_LR: 0.05
   WEIGHT_DECAY: 0.0001
+

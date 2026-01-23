@@ -113,45 +113,43 @@ def trainer_acdc(args, model, snapshot_path):
             epoch_num + 1, batch_loss, batch_ce_loss, batch_dice_loss))
         print(f'Train epoch: {epoch_num + 1}/{max_epoch} : loss : {batch_loss:.6f}, loss_ce: {batch_ce_loss:.6f}, loss_dice: {batch_dice_loss:.6f}')
         
-        # Validation
-        if (epoch_num + 1) % 10 == 0:  # Validate every 10 epochs
-            model.eval()
-            val_batch_dice_loss = 0
-            val_batch_ce_loss = 0
-            
-            with torch.no_grad():
-                for i_batch, sampled_batch in tqdm(enumerate(val_loader), total=len(val_loader),
-                                                   leave=False):
-                    image_batch, label_batch = sampled_batch['image'], sampled_batch['label']
-                    image_batch, label_batch = image_batch.cuda(), label_batch.cuda()
-                    
-                    outputs = model(image_batch)
-                    loss_ce = ce_loss(outputs, label_batch[:].long())
-                    loss_dice = dice_loss(outputs, label_batch, softmax=True)
-                    
-                    val_batch_dice_loss += loss_dice.item()
-                    val_batch_ce_loss += loss_ce.item()
+        # Validation every epoch
+        model.eval()
+        val_batch_dice_loss = 0
+        val_batch_ce_loss = 0
+        
+        with torch.no_grad():
+            for i_batch, sampled_batch in tqdm(enumerate(val_loader), total=len(val_loader),
+                                               leave=False):
+                image_batch, label_batch = sampled_batch['image'], sampled_batch['label']
+                image_batch, label_batch = image_batch.cuda(), label_batch.cuda()
+                
+                outputs = model(image_batch)
+                loss_ce = ce_loss(outputs, label_batch[:].long())
+                loss_dice = dice_loss(outputs, label_batch, softmax=True)
+                
+                val_batch_dice_loss += loss_dice.item()
+                val_batch_ce_loss += loss_ce.item()
 
-                val_batch_ce_loss /= len(val_loader)
-                val_batch_dice_loss /= len(val_loader)
-                val_batch_loss = 0.4 * val_batch_ce_loss + 0.6 * val_batch_dice_loss
-                
-                logging.info('Val epoch: %d : loss : %f, loss_ce: %f, loss_dice: %f' % (
-                    epoch_num + 1, val_batch_loss, val_batch_ce_loss, val_batch_dice_loss))
-                print(f'Val epoch: {epoch_num + 1}/{max_epoch} : loss : {val_batch_loss:.6f}, loss_ce: {val_batch_ce_loss:.6f}, loss_dice: {val_batch_dice_loss:.6f}')
-                
-                # Save best model
-                if val_batch_loss < best_loss:
-                    save_mode_path = os.path.join(snapshot_path, 'best_model.pth')
-                    torch.save(model.state_dict(), save_mode_path)
-                    best_loss = val_batch_loss
-                    logging.info("save best model to {}".format(save_mode_path))
+            val_batch_ce_loss /= len(val_loader)
+            val_batch_dice_loss /= len(val_loader)
+            val_batch_loss = 0.4 * val_batch_ce_loss + 0.6 * val_batch_dice_loss
+            
+            logging.info('Val epoch: %d : loss : %f, loss_ce: %f, loss_dice: %f' % (
+                epoch_num + 1, val_batch_loss, val_batch_ce_loss, val_batch_dice_loss))
+            print(f'Val epoch: {epoch_num + 1}/{max_epoch} : loss : {val_batch_loss:.6f}, loss_ce: {val_batch_ce_loss:.6f}, loss_dice: {val_batch_dice_loss:.6f}')
+            
+            # Save best model
+            if val_batch_loss < best_loss:
+                save_mode_path = os.path.join(snapshot_path, 'best_model.pth')
+                torch.save(model.state_dict(), save_mode_path)
+                best_loss = val_batch_loss
+                logging.info("save best model to {}".format(save_mode_path))
         
         # Save checkpoint every epoch
-        if (epoch_num + 1) % 10 == 0:
-            save_mode_path = os.path.join(snapshot_path, f'epoch_{epoch_num + 1}.pth')
-            torch.save(model.state_dict(), save_mode_path)
-            logging.info("save checkpoint to {}".format(save_mode_path))
+        save_mode_path = os.path.join(snapshot_path, f'epoch_{epoch_num + 1}.pth')
+        torch.save(model.state_dict(), save_mode_path)
+        logging.info("save checkpoint to {}".format(save_mode_path))
 
     writer.close()
     return "Training Finished!"
