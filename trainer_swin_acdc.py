@@ -8,8 +8,9 @@ from tensorboardX import SummaryWriter
 from torch.nn.modules.loss import CrossEntropyLoss
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+import numpy as np
 
-from utils import DiceLoss
+from utils import DiceLoss, test_single_volume
 
 
 def trainer_acdc(args, model, snapshot_path):
@@ -59,6 +60,9 @@ def trainer_acdc(args, model, snapshot_path):
     print("{} iterations per epoch. {} max iterations".format(len(train_loader), max_iterations))
     
     best_loss = 10e10
+    best_dice = 0.0
+    # Validation mỗi N epoch (tùy chỉ) mỗi N epoch thì sẽ validate thêm Dice + HD95
+    eval_interval = 10  # Validate every N epochs
     
     for epoch_num in range(max_epoch):
         model.train()
@@ -111,38 +115,80 @@ def trainer_acdc(args, model, snapshot_path):
             epoch_num + 1, batch_loss, batch_ce_loss, batch_dice_loss))
         print(f'Train epoch: {epoch_num + 1}/{max_epoch} : loss : {batch_loss:.6f}, loss_ce: {batch_ce_loss:.6f}, loss_dice: {batch_dice_loss:.6f}')
         
-        # Validation every epoch
-        model.eval()
-        val_batch_dice_loss = 0
-        val_batch_ce_loss = 0
-        
-        with torch.no_grad():
-            for i_batch, sampled_batch in tqdm(enumerate(val_loader), total=len(val_loader),
-                                               leave=False):
-                image_batch, label_batch = sampled_batch['image'], sampled_batch['label']
-                image_batch, label_batch = image_batch.cuda(), label_batch.cuda()
-                
-                outputs = model(image_batch)
-                loss_ce = ce_loss(outputs, label_batch[:].long())
-                loss_dice = dice_loss(outputs, label_batch, softmax=True)
-                
-                val_batch_dice_loss += loss_dice.item()
-                val_batch_ce_loss += loss_ce.item()
-
-            val_batch_ce_loss /= len(val_loader)
-            val_batch_dice_loss /= len(val_loader)
-            val_batch_loss = 0.4 * val_batch_ce_loss + 0.6 * val_batch_dice_loss
+        # Validation every N epochs
+        if (epoch_num + 1) % eval_interval == 0:
+            model.eval()
+            metric_list = []
             
-            logging.info('Val epoch: %d : loss : %f, loss_ce: %f, loss_dice: %f' % (
-                epoch_num + 1, val_batch_loss, val_batch_ce_loss, val_batch_dice_loss))
-            print(f'Val epoch: {epoch_num + 1}/{max_epoch} : loss : {val_batch_loss:.6f}, loss_ce: {val_batch_ce_loss:.6f}, loss_dice: {val_batch_dice_loss:.6f}')
+            with torch.no_grad():
+                for i_batch, sampled_batch in tqdm(enumerate(val_loader), total=len(val_loader),
+                                                   leave=False, desc="Validation"):
+                    image_batch = sampled_batch['image']
+                    label_batch = sampled_batch['label']
+                    
+                    metric_i = test_single_volume(image_batch, label_batch, model, classes=num_classes,
+                                                  patch_size=[args.img_size, args.img_size])
+                    metric_list.append(np.array(metric_i))
             
-            # Save best model
-            if val_batch_loss < best_loss:
+            metric_list = np.array(metric_list)
+            metric_list = np.mean(metric_list, axis=0)
+            
+            # Log metrics for each class
+            for class_i in range(num_classes - 1):
+                writer.add_scalar('info/val_{}_dice'.format(class_i + 1),
+                                  metric_list[class_i, 0], epoch_num + 1)
+                writer.add_scalar('info/val_{}_hd95'.format(class_i + 1),
+                                  metric_list[class_i, 1], epoch_num + 1)
+            
+            mean_dice = np.mean(metric_list, axis=0)[0]
+            mean_hd95 = np.mean(metric_list, axis=0)[1]
+            writer.add_scalar('info/val_mean_dice', mean_dice, epoch_num + 1)
+            writer.add_scalar('info/val_mean_hd95', mean_hd95, epoch_num + 1)
+            
+            logging.info('Val epoch: %d : mean_dice : %f, mean_hd95: %f' % (
+                epoch_num + 1, mean_dice, mean_hd95))
+            print(f'Val epoch: {epoch_num + 1}/{max_epoch} : mean_dice : {mean_dice:.6f}, mean_hd95: {mean_hd95:.6f}')
+            
+            # Save best model based on Dice
+            if mean_dice > best_dice:
                 save_mode_path = os.path.join(snapshot_path, 'best_model.pth')
                 torch.save(model.state_dict(), save_mode_path)
-                best_loss = val_batch_loss
+                best_dice = mean_dice
                 logging.info("save best model to {}".format(save_mode_path))
+        
+        # Validation every epoch (loss-based, for quick feedback)
+        else:
+            model.eval()
+            val_batch_dice_loss = 0
+            val_batch_ce_loss = 0
+            
+            with torch.no_grad():
+                for i_batch, sampled_batch in tqdm(enumerate(val_loader), total=len(val_loader),
+                                                   leave=False, desc="Val loss"):
+                    image_batch, label_batch = sampled_batch['image'], sampled_batch['label']
+                    image_batch, label_batch = image_batch.cuda(), label_batch.cuda()
+                    
+                    outputs = model(image_batch)
+                    loss_ce = ce_loss(outputs, label_batch[:].long())
+                    loss_dice = dice_loss(outputs, label_batch, softmax=True)
+                    
+                    val_batch_dice_loss += loss_dice.item()
+                    val_batch_ce_loss += loss_ce.item()
+
+                val_batch_ce_loss /= len(val_loader)
+                val_batch_dice_loss /= len(val_loader)
+                val_batch_loss = 0.4 * val_batch_ce_loss + 0.6 * val_batch_dice_loss
+                
+                logging.info('Val epoch: %d : loss : %f, loss_ce: %f, loss_dice: %f' % (
+                    epoch_num + 1, val_batch_loss, val_batch_ce_loss, val_batch_dice_loss))
+                print(f'Val epoch: {epoch_num + 1}/{max_epoch} : loss : {val_batch_loss:.6f}, loss_ce: {val_batch_ce_loss:.6f}, loss_dice: {val_batch_dice_loss:.6f}')
+                
+                # Save best model based on loss
+                if val_batch_loss < best_loss:
+                    save_mode_path = os.path.join(snapshot_path, 'best_model.pth')
+                    torch.save(model.state_dict(), save_mode_path)
+                    best_loss = val_batch_loss
+                    logging.info("save best model to {}".format(save_mode_path))
         
         # Save checkpoint every epoch
         save_mode_path = os.path.join(snapshot_path, f'epoch_{epoch_num + 1}.pth')
