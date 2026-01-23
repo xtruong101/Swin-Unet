@@ -8,6 +8,7 @@ from tensorboardX import SummaryWriter
 from torch.nn.modules.loss import CrossEntropyLoss
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from scipy.ndimage.interpolation import zoom
 import numpy as np
 
 from utils import DiceLoss, test_single_volume
@@ -115,22 +116,31 @@ def trainer_acdc(args, model, snapshot_path):
             epoch_num + 1, batch_loss, batch_ce_loss, batch_dice_loss))
         print(f'Train epoch: {epoch_num + 1}/{max_epoch} : loss : {batch_loss:.6f}, loss_ce: {batch_ce_loss:.6f}, loss_dice: {batch_dice_loss:.6f}')
         
-        # Validation every N epochs
+        # Validation every N epochs (with Dice/HD95 metrics)
         if (epoch_num + 1) % eval_interval == 0:
             model.eval()
-            metric_list = []
             
             with torch.no_grad():
                 for i_batch, sampled_batch in tqdm(enumerate(val_loader), total=len(val_loader),
                                                    leave=False, desc="Validation"):
-                    image_batch = sampled_batch['image']
-                    label_batch = sampled_batch['label']
+                    image_batch = sampled_batch['image'].squeeze(0).cpu().detach().numpy()
+                    label_batch = sampled_batch['label'].squeeze(0).cpu().detach().numpy()
                     
-                    metric_i = test_single_volume(image_batch, label_batch, model, classes=num_classes,
+                    # Resize to model input size (224, 224)
+                    img_h, img_w = image_batch.shape[-2:]
+                    if img_h != args.img_size or img_w != args.img_size:
+                        image_batch = zoom(image_batch, (args.img_size / img_h, args.img_size / img_w), order=3)
+                        label_batch = zoom(label_batch, (args.img_size / img_h, args.img_size / img_w), order=0)
+                    
+                    metric_i = test_single_volume(torch.from_numpy(image_batch).unsqueeze(0).unsqueeze(0), 
+                                                  torch.from_numpy(label_batch).unsqueeze(0),
+                                                  model, classes=num_classes,
                                                   patch_size=[args.img_size, args.img_size])
-                    metric_list.append(np.array(metric_i))
+                    if i_batch == 0:
+                        metric_list = np.array(metric_i)
+                    else:
+                        metric_list = np.vstack([metric_list, np.array(metric_i)])
             
-            metric_list = np.array(metric_list)
             metric_list = np.mean(metric_list, axis=0)
             
             # Log metrics for each class
