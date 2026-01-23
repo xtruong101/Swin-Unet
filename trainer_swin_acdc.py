@@ -4,6 +4,7 @@ import random
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 from tensorboardX import SummaryWriter
 from torch.nn.modules.loss import CrossEntropyLoss
 from torch.utils.data import DataLoader
@@ -76,21 +77,12 @@ def trainer_acdc(args, model, snapshot_path):
             
             # Ensure correct image size (224, 224)
             if image_batch.shape[-2:] != (args.img_size, args.img_size):
-                # Resize to (224, 224)
-                B, C, H, W = image_batch.shape
-                image_batch_np = image_batch.cpu().numpy()
-                label_batch_np = label_batch.cpu().numpy()
-                
-                image_resized = []
-                label_resized = []
-                for b in range(B):
-                    img_b = zoom(image_batch_np[b], (C, args.img_size / H, args.img_size / W), order=3)
-                    lbl_b = zoom(label_batch_np[b], (args.img_size / H, args.img_size / W), order=0)
-                    image_resized.append(img_b)
-                    label_resized.append(lbl_b)
-                
-                image_batch = torch.from_numpy(np.array(image_resized)).float()
-                label_batch = torch.from_numpy(np.array(label_resized)).long()
+                # Resize using PyTorch interpolate
+                image_batch = F.interpolate(image_batch, size=(args.img_size, args.img_size), 
+                                           mode='bilinear', align_corners=False)
+                label_batch = F.interpolate(label_batch.unsqueeze(1).float(), 
+                                           size=(args.img_size, args.img_size),
+                                           mode='nearest').squeeze(1).long()
             
             image_batch, label_batch = image_batch.cuda(), label_batch.cuda()
             
