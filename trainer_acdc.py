@@ -51,6 +51,11 @@ def trainer_acdc(args, model, snapshot_path):
     best_performance = 0.0
     iterator = tqdm(range(max_epoch), ncols=70)
     for epoch_num in iterator:
+        epoch_loss = 0.0
+        epoch_loss_ce = 0.0
+        epoch_loss_dice = 0.0
+        num_batches = 0
+        
         for i_batch, sampled_batch in enumerate(trainloader):
             volume_batch, label_batch = sampled_batch['image'], sampled_batch['label']
             volume_batch, label_batch = volume_batch.cuda(), label_batch.cuda()
@@ -66,11 +71,17 @@ def trainer_acdc(args, model, snapshot_path):
                 param_group['lr'] = lr_
 
             iter_num = iter_num + 1
+            num_batches += 1
+            epoch_loss += loss.item()
+            epoch_loss_ce += loss_ce.item()
+            epoch_loss_dice += loss_dice.item()
+            
             writer.add_scalar('info/lr', lr_, iter_num)
             writer.add_scalar('info/total_loss', loss, iter_num)
             writer.add_scalar('info/loss_ce', loss_ce, iter_num)
 
-            logging.info('iteration %d : loss : %f, loss_ce: %f' % (iter_num, loss.item(), loss_ce.item()))
+            # Print batch progress (1/221, 2/221, etc.)
+            print(f'\rEpoch {epoch_num + 1}/{max_epoch} : Batch {i_batch + 1}/{len(trainloader)}', end='', flush=True)
 
             if iter_num % 20 == 0:
                 image = volume_batch[1, 0:1, :, :]
@@ -83,7 +94,7 @@ def trainer_acdc(args, model, snapshot_path):
                 labs = label_batch[1, ...].unsqueeze(0) * 50
                 writer.add_image('train/GroundTruth', labs, iter_num)
 
-            if iter_num > 0 and iter_num % 500 == 0:  # 500
+            if iter_num > 0 and iter_num % 500 == 0:
                 model.eval()
                 metric_list = 0.0
                 for i_batch, sampled_batch in enumerate(valloader):
@@ -116,6 +127,13 @@ def trainer_acdc(args, model, snapshot_path):
 
             if iter_num >= max_iterations:
                 break
+        
+        # Print epoch summary
+        avg_epoch_loss = epoch_loss / num_batches
+        avg_epoch_loss_ce = epoch_loss_ce / num_batches
+        avg_epoch_loss_dice = epoch_loss_dice / num_batches
+        logging.info('Train epoch: {}/{} : loss : {:.6f}, loss_ce: {:.6f}, loss_dice: {:.6f}'.format(
+            epoch_num + 1, max_epoch, avg_epoch_loss, avg_epoch_loss_ce, avg_epoch_loss_dice))
 
 def trainer_synapse(args, model, snapshot_path):
     from datasets.dataset_synapse import Synapse_dataset, RandomGenerator
