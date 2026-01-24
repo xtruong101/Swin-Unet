@@ -76,7 +76,8 @@ def trainer_acdc(args, model, snapshot_path):
             image_batch, label_batch = sampled_batch['image'], sampled_batch['label']
             
             # Ensure correct image size (224, 224)
-            if image_batch.shape[-2:] != (args.img_size, args.img_size):
+            H, W = image_batch.shape[-2], image_batch.shape[-1]
+            if H != args.img_size or W != args.img_size:
                 # Resize using PyTorch interpolate
                 image_batch = F.interpolate(image_batch, size=(args.img_size, args.img_size), 
                                            mode='bilinear', align_corners=False)
