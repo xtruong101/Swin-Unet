@@ -14,6 +14,8 @@ parser.add_argument('--cfg', type=str,
                     default='./configs/swin_tiny_patch4_window7_224_lite.yaml', 
                     help='path to config file', metavar="FILE")
 parser.add_argument('--opts', help="Modify config options by adding 'KEY VALUE' pairs. ", default=[], nargs='+')
+parser.add_argument('--output_dir', type=str,
+                    default='../model', help='output directory for model and log')
 parser.add_argument('--root_path', type=str,
                     default='../data/Synapse/train_npz', help='root dir for data')
 parser.add_argument('--dataset', type=str,
@@ -79,11 +81,9 @@ if __name__ == "__main__":
     args.list_dir = dataset_config[dataset_name]['list_dir']
     args.is_pretrain = True
     args.exp = 'TU_' + dataset_name + str(args.img_size)
-    snapshot_path = "../model/{}/{}".format(args.exp, 'TU')
+    snapshot_path = "{}/{}/{}".format(args.output_dir, args.exp, 'TU')
     snapshot_path = snapshot_path + '_pretrain' if args.is_pretrain else snapshot_path
-    snapshot_path += '_' + args.vit_name
     snapshot_path = snapshot_path + '_skip' + str(args.n_skip)
-    snapshot_path = snapshot_path + '_vitpatch' + str(args.vit_patches_size) if args.vit_patches_size!=16 else snapshot_path
     snapshot_path = snapshot_path+'_'+str(args.max_iterations)[0:2]+'k' if args.max_iterations != 30000 else snapshot_path
     snapshot_path = snapshot_path + '_epo' +str(args.max_epochs) if args.max_epochs != 30 else snapshot_path
     snapshot_path = snapshot_path+'_bs'+str(args.batch_size)
