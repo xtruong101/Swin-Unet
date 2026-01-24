@@ -5,10 +5,7 @@ import random
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
-# from networks.vit_seg_modeling import VisionTransformer as ViT_seg
-# from networks.vit_seg_modeling import CONFIGS as CONFIGS_ViT_seg
-from networks.vision_transformer import SwinUnet as ViT_seg
-from networks.vit_seg_modeling import CONFIGS as CONFIGS_ViT_seg
+from networks.vision_transformer import SwinUnet as ViT_seg, CONFIGS_ViT_seg
 from trainer_acdc import trainer_synapse, trainer_acdc
 
 parser = argparse.ArgumentParser()
@@ -37,10 +34,6 @@ parser.add_argument('--seed', type=int,
                     default=1234, help='random seed')
 parser.add_argument('--n_skip', type=int,
                     default=3, help='using number of skip-connect, default is num')
-parser.add_argument('--vit_name', type=str,
-                    default='R50-ViT-B_16', help='select one vit model')
-parser.add_argument('--vit_patches_size', type=int,
-                    default=16, help='vit_patches_size, default is 16')
 args = parser.parse_args()
 
 
@@ -59,7 +52,6 @@ if __name__ == "__main__":
     dataset_name = args.dataset
     dataset_config = {
         'ACDC': {
-            'Dataset': ACDC_dataset,  # datasets.dataset_acdc.BaseDataSets,
             'root_path': '../data/ACDC',
             'list_dir': None,
             'num_classes': 4,
@@ -90,12 +82,7 @@ if __name__ == "__main__":
     if not os.path.exists(snapshot_path):
         os.makedirs(snapshot_path)
     config_vit = CONFIGS_ViT_seg[args.vit_name]
-    config_vit.n_classes = args.num_classes
-    config_vit.n_skip = args.n_skip
-    if args.vit_name.find('R50') != -1:
-        config_vit.patches.grid = (int(args.img_size / args.vit_patches_size), int(args.img_size / args.vit_patches_size))
-    net = ViT_seg(config_vit, img_size=args.img_size, num_classes=config_vit.n_classes).cuda()
-    net.load_from(weights=np.load(config_vit.pretrained_path))
-
+    
+    net = ViT_seg(img_size=args.img_size, num_classes=args.num_classes).cuda(
     trainer = {'Synapse': trainer_synapse,'ACDC': trainer_acdc,}
     trainer[dataset_name](args, net, snapshot_path)

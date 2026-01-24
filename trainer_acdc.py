@@ -12,7 +12,7 @@ from tensorboardX import SummaryWriter
 from torch.nn.modules.loss import CrossEntropyLoss
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from utils import DiceLoss
+from utils import DiceLoss, test_single_volume
 from torchvision import transforms
 
 def trainer_acdc(args, model, snapshot_path):
@@ -37,10 +37,14 @@ def trainer_acdc(args, model, snapshot_path):
     ce_loss = CrossEntropyLoss(ignore_index=4)
     dice_loss = DiceLoss(num_classes)
 
+    logging.basicConfig(filename=snapshot_path + "/log.txt", level=logging.INFO,
+                        format='[%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S')
+    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+    logging.info(str(args))
+    
     writer = SummaryWriter(snapshot_path + '/log')
     logging.info("{} iterations per epoch".format(len(trainloader)))
     logging.info("{} val iterations per epoch".format(len(valloader)))
-    logging.info("{} test iterations per epoch".format(len(testloader)))
 
     iter_num = 0
     max_epoch = max_iterations // len(trainloader) + 1
