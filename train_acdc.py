@@ -5,10 +5,15 @@ import random
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
-from networks.vision_transformer import SwinUnet as ViT_seg, CONFIGS_ViT_seg
+from networks.vision_transformer import SwinUnet as ViT_seg
 from trainer_acdc import trainer_synapse, trainer_acdc
+from config import _C as config, _update_config_from_file
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--cfg', type=str, 
+                    default='./configs/swin_tiny_patch4_window7_224_lite.yaml', 
+                    help='path to config file', metavar="FILE")
+parser.add_argument('--opts', help="Modify config options by adding 'KEY VALUE' pairs. ", default=[], nargs='+')
 parser.add_argument('--root_path', type=str,
                     default='../data/Synapse/train_npz', help='root dir for data')
 parser.add_argument('--dataset', type=str,
@@ -38,6 +43,13 @@ args = parser.parse_args()
 
 
 if __name__ == "__main__":
+    # Load config
+    _update_config_from_file(config, args.cfg)
+    if args.opts:
+        config.defrost()
+        config.merge_from_list(args.opts)
+        config.freeze()
+    
     if not args.deterministic:
         cudnn.benchmark = True
         cudnn.deterministic = False
@@ -81,8 +93,8 @@ if __name__ == "__main__":
 
     if not os.path.exists(snapshot_path):
         os.makedirs(snapshot_path)
-    config_vit = CONFIGS_ViT_seg[args.vit_name]
     
-    net = ViT_seg(img_size=args.img_size, num_classes=args.num_classes).cuda()
+    net = ViT_seg(config, img_size=args.img_size, num_classes=args.num_classes).cuda()
+
     trainer = {'Synapse': trainer_synapse,'ACDC': trainer_acdc,}
     trainer[dataset_name](args, net, snapshot_path)
