@@ -39,7 +39,7 @@ def trainer_acdc(args, model, snapshot_path):
     dice_loss = DiceLoss(num_classes)
 
     logging.basicConfig(filename=snapshot_path + "/log.txt", level=logging.INFO,
-                        format='[%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S')
+                        format='[%(asctime)s.%(msecs)03d] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
     logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
     logging.info(str(args))
     
@@ -58,7 +58,11 @@ def trainer_acdc(args, model, snapshot_path):
         epoch_loss_dice = 0.0
         num_batches = 0
         
-        for i_batch, sampled_batch in enumerate(trainloader):
+        # Create progress bar for batches in this epoch
+        batch_iterator = tqdm(enumerate(trainloader), total=len(trainloader), 
+                             desc=f'Epoch {epoch_num + 1}/{max_epoch}', ncols=100, leave=False)
+        
+        for i_batch, sampled_batch in batch_iterator:
             volume_batch, label_batch = sampled_batch['image'], sampled_batch['label']
             volume_batch, label_batch = volume_batch.cuda(), label_batch.cuda()
             outputs = model(volume_batch)
@@ -84,8 +88,13 @@ def trainer_acdc(args, model, snapshot_path):
             writer.add_scalar('info/total_loss', loss, iter_num)
             writer.add_scalar('info/loss_ce', loss_ce, iter_num)
 
-            # Print batch progress (1/221, 2/221, etc.)
-            print(f'\rEpoch {epoch_num + 1}/{max_epoch} : Batch {i_batch + 1}/{len(trainloader)}', end='', flush=True)
+            # Update progress bar with current batch info
+            batch_iterator.set_postfix({
+                'loss': f'{loss.item():.6f}',
+                'loss_ce': f'{loss_ce.item():.6f}',
+                'loss_dice': f'{loss_dice.item():.6f}',
+                'lr': f'{lr_:.6f}'
+            })
 
             if iter_num % 20 == 0:
                 image = volume_batch[1, 0:1, :, :]
