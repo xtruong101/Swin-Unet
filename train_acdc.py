@@ -2,6 +2,7 @@ import argparse
 import logging
 import os
 import random
+import sys
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
@@ -77,8 +78,11 @@ if __name__ == "__main__":
         },
     }
     args.num_classes = dataset_config[dataset_name]['num_classes']
-    args.root_path = dataset_config[dataset_name]['root_path']
-    args.list_dir = dataset_config[dataset_name]['list_dir']
+    # Only override root_path if not explicitly provided via --root_path
+    if '--root_path' not in sys.argv:
+        args.root_path = dataset_config[dataset_name]['root_path']
+    if '--list_dir' not in sys.argv:
+        args.list_dir = dataset_config[dataset_name]['list_dir']
     args.is_pretrain = True
     args.exp = 'TU_' + dataset_name + str(args.img_size)
     snapshot_path = "{}/{}/{}".format(args.output_dir, args.exp, 'TU')
