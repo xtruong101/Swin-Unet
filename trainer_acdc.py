@@ -60,7 +60,7 @@ def trainer_acdc(args, model, snapshot_path):
         
         # Create progress bar for batches in this epoch
         batch_iterator = tqdm(enumerate(trainloader), total=len(trainloader), 
-                             desc=f'Epoch {epoch_num + 1}/{max_epoch}', ncols=120, leave=False, bar_format='{desc}: {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix}')
+                             desc=f'Epoch {epoch_num + 1}/{max_epoch}', ncols=100, leave=False, file=sys.stdout, disable=False)
         
         for i_batch, sampled_batch in batch_iterator:
             volume_batch, label_batch = sampled_batch['image'], sampled_batch['label']
