@@ -83,6 +83,6 @@ if __name__ == "__main__":
         os.makedirs(snapshot_path)
     config_vit = CONFIGS_ViT_seg[args.vit_name]
     
-    net = ViT_seg(img_size=args.img_size, num_classes=args.num_classes).cuda(
+    net = ViT_seg(img_size=args.img_size, num_classes=args.num_classes).cuda()
     trainer = {'Synapse': trainer_synapse,'ACDC': trainer_acdc,}
     trainer[dataset_name](args, net, snapshot_path)
