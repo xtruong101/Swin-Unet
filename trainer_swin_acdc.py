@@ -75,20 +75,19 @@ def trainer_acdc(args, model, snapshot_path):
                                            leave=False):
             image_batch, label_batch = sampled_batch['image'], sampled_batch['label']
             
-            # Debug: Print actual shape
+            # Debug: Print actual shape for each batch
             H, W = image_batch.shape[-2], image_batch.shape[-1]
-            if i_batch == 0:
-                print(f"DEBUG: Original image shape: {image_batch.shape}, H={H}, W={W}, target={args.img_size}")
+            if i_batch < 3:  # Print first 3 batches
+                print(f"Batch {i_batch}: shape={image_batch.shape}, H={H}, W={W}, target={args.img_size}")
             
             # Ensure correct image size (224, 224) - ALWAYS resize if not matching
             if H != args.img_size or W != args.img_size:
-                print(f"Resizing from ({H}, {W}) to ({args.img_size}, {args.img_size})")
+                print(f"⚠️  Batch {i_batch}: Resizing from ({H}, {W}) to ({args.img_size}, {args.img_size})")
                 image_batch = F.interpolate(image_batch, size=(args.img_size, args.img_size), 
                                            mode='bilinear', align_corners=False)
                 label_batch = F.interpolate(label_batch.unsqueeze(1).float(), 
                                            size=(args.img_size, args.img_size),
                                            mode='nearest').squeeze(1).long()
-                print(f"After resize: image shape = {image_batch.shape}")
             
             image_batch, label_batch = image_batch.cuda(), label_batch.cuda()
             
