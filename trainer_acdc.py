@@ -21,6 +21,7 @@ def trainer_acdc(args, model, snapshot_path):
     num_classes = args.num_classes
     batch_size = args.batch_size
     max_iterations = args.max_iterations
+    max_epochs = args.max_epochs
 
     db_train = BaseDataSets(base_dir=args.root_path, split="train", transform=transforms.Compose([
         RandomGenerator([args.img_size, args.img_size])]))
@@ -47,7 +48,8 @@ def trainer_acdc(args, model, snapshot_path):
     logging.info("{} val iterations per epoch".format(len(valloader)))
 
     iter_num = 0
-    max_epoch = max_iterations // len(trainloader) + 1
+    max_epoch = max_epochs  # Use max_epochs from args instead of calculating from max_iterations
+    total_iterations = max_epochs * len(trainloader)
     best_performance = 0.0
     iterator = tqdm(range(max_epoch), ncols=70)
     for epoch_num in iterator:
@@ -66,7 +68,9 @@ def trainer_acdc(args, model, snapshot_path):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            lr_ = base_lr * (1.0 - iter_num / max_iterations) ** 0.9
+            # Update learning rate based on total max_iterations
+            
+            lr_ = base_lr * (1.0 - iter_num / total_iterations) ** 0.9
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr_
 
@@ -125,8 +129,7 @@ def trainer_acdc(args, model, snapshot_path):
                 logging.info('iteration %d : mean_dice : %f mean_hd95 : %f' % (iter_num, performance, mean_hd95))
                 model.train()
 
-            if iter_num >= max_iterations:
-                break
+            # Note: Validation happens every 500 iterations if needed
         
         # Print epoch summary
         avg_epoch_loss = epoch_loss / num_batches
