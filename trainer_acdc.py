@@ -51,16 +51,16 @@ def trainer_acdc(args, model, snapshot_path):
     max_epoch = max_epochs  # Use max_epochs from args instead of calculating from max_iterations
     total_iterations = max_epochs * len(trainloader)
     best_performance = 0.0
-    iterator = tqdm(range(max_epoch), ncols=70)
-    for epoch_num in iterator:
+    
+    for epoch_num in range(max_epoch):
         epoch_loss = 0.0
         epoch_loss_ce = 0.0
         epoch_loss_dice = 0.0
         num_batches = 0
         
-        # Create progress bar for batches in this epoch
         batch_iterator = tqdm(enumerate(trainloader), total=len(trainloader), 
-                             desc=f'Epoch {epoch_num + 1}/{max_epoch}', ncols=100, leave=False, file=sys.stdout, disable=False)
+                             desc=f'Epoch {epoch_num + 1}: ', ncols=100, leave=False,
+                             bar_format='{desc}Iter {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix}')
         
         for i_batch, sampled_batch in batch_iterator:
             volume_batch, label_batch = sampled_batch['image'], sampled_batch['label']
