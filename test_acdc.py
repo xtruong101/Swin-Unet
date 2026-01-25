@@ -16,8 +16,13 @@ except:
     pass
 from utils import test_single_volume
 from networks.vision_transformer import SwinUnet as ViT_seg
+from config import _C as config, _update_config_from_file
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--cfg', type=str, 
+                    default='./configs/swin_tiny_patch4_window7_224_lite.yaml', 
+                    help='path to config file', metavar="FILE")
+parser.add_argument('--opts', help="Modify config options by adding 'KEY VALUE' pairs. ", default=[], nargs='+')
 parser.add_argument('--volume_path', type=str,
                     default='../data/Synapse/test_vol_h5', help='root dir for validation volume data')  # for acdc volume_path=root_dir
 parser.add_argument('--dataset', type=str,
@@ -26,7 +31,8 @@ parser.add_argument('--num_classes', type=int,
                     default=4, help='output channel of network')
 parser.add_argument('--list_dir', type=str,
                     default='./lists/lists_Synapse', help='list dir')
-
+parser.add_argument('--output_dir', type=str,
+                    default='../model', help='output directory for model')
 parser.add_argument('--max_iterations', type=int,default=20000, help='maximum epoch number to train')
 parser.add_argument('--max_epochs', type=int, default=30, help='maximum epoch number to train')
 parser.add_argument('--batch_size', type=int, default=24,
@@ -69,6 +75,12 @@ def inference(args, model, test_save_path=None):
 
 
 if __name__ == "__main__":
+    # Load config
+    _update_config_from_file(config, args.cfg)
+    if args.opts:
+        config.defrost()
+        config.merge_from_list(args.opts)
+        config.freeze()
 
     if not args.deterministic:
         cudnn.benchmark = True
@@ -108,7 +120,7 @@ if __name__ == "__main__":
 
     # name the same snapshot defined in train script!
     args.exp = 'TU_' + dataset_name + str(args.img_size)
-    snapshot_path = "../model/{}/{}".format(args.exp, 'TU')
+    snapshot_path = "{}/{}/{}".format(args.output_dir, args.exp, 'TU')
     snapshot_path = snapshot_path + '_pretrain' if args.is_pretrain else snapshot_path
     snapshot_path = snapshot_path + '_skip' + str(args.n_skip)
     snapshot_path = snapshot_path + '_epo' + str(args.max_epochs) if args.max_epochs != 30 else snapshot_path
@@ -119,7 +131,7 @@ if __name__ == "__main__":
     snapshot_path = snapshot_path + '_'+str(args.img_size)
     snapshot_path = snapshot_path + '_s'+str(args.seed) if args.seed!=1234 else snapshot_path
 
-    net = ViT_seg(num_classes=args.num_classes).cuda()
+    net = ViT_seg(config, img_size=args.img_size, num_classes=args.num_classes).cuda()
 
     snapshot = os.path.join(snapshot_path, 'best_model.pth')
     if not os.path.exists(snapshot): snapshot = snapshot.replace('best_model', 'epoch_'+str(args.max_epochs-1))
