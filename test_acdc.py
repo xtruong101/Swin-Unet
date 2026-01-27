@@ -161,21 +161,31 @@ if __name__ == "__main__":
         snapshot = os.path.join(snapshot_path, 'best_model.pth')
         if not os.path.exists(snapshot): snapshot = snapshot.replace('best_model', 'epoch_'+str(args.max_epochs-1))
     
-    logging.info(f"Loading model from: {snapshot}")
-    net.load_state_dict(torch.load(snapshot))
     snapshot_name = snapshot_path.split('/')[-1]
-
     log_folder = './test_log/test_log_' + args.exp
     os.makedirs(log_folder, exist_ok=True)
-    logging.basicConfig(filename=log_folder + '/'+snapshot_name+".txt", level=logging.INFO, format='[%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S')
+    
+    # Setup logging BEFORE any logging calls
+    logging.basicConfig(filename=log_folder + '/'+snapshot_name+".txt", level=logging.INFO, format='[%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S', force=True)
+    
+    logging.info(f"Loading model from: {snapshot}")
+    net.load_state_dict(torch.load(snapshot))
     logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
     logging.info(str(args))
     logging.info(snapshot_name)
 
     if args.is_savenii:
-        args.test_save_dir = '../predictions'
-        test_save_path = os.path.join(args.test_save_dir, args.exp, snapshot_name)
+        # If model_path is provided, save predictions in model directory
+        if args.model_path:
+            if os.path.isdir(args.model_path):
+                model_dir = args.model_path
+            else:
+                model_dir = os.path.dirname(args.model_path)
+            test_save_path = os.path.join(model_dir, 'predictions', snapshot_name)
+        else:
+            test_save_path = os.path.join(args.test_save_dir, args.exp, snapshot_name)
         os.makedirs(test_save_path, exist_ok=True)
+        logging.info(f"Output results will be saved to: {test_save_path}")
     else:
         test_save_path = None
     inference(args, net, test_save_path)
