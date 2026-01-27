@@ -137,6 +137,22 @@ if __name__ == "__main__":
     # Use custom model path if provided, otherwise use default path
     if args.model_path:
         snapshot = args.model_path
+        # If model_path is a directory, find the best model in it
+        if os.path.isdir(snapshot):
+            best_model_path = os.path.join(snapshot, 'best_model.pth')
+            epoch_model_path = os.path.join(snapshot, f'epoch_{args.max_epochs-1}.pth')
+            if os.path.exists(best_model_path):
+                snapshot = best_model_path
+            elif os.path.exists(epoch_model_path):
+                snapshot = epoch_model_path
+            else:
+                # Find latest epoch model
+                import glob
+                pth_files = glob.glob(os.path.join(snapshot, 'epoch_*.pth'))
+                if pth_files:
+                    snapshot = max(pth_files, key=os.path.getctime)
+                else:
+                    raise FileNotFoundError(f"No model file found in directory: {snapshot}")
     else:
         snapshot = os.path.join(snapshot_path, 'best_model.pth')
         if not os.path.exists(snapshot): snapshot = snapshot.replace('best_model', 'epoch_'+str(args.max_epochs-1))
