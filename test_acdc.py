@@ -171,7 +171,7 @@ if __name__ == "__main__":
             model_dir = os.path.dirname(args.model_path)
         log_folder = os.path.join(model_dir, 'predictions')
         os.makedirs(log_folder, exist_ok=True)
-        log_file = os.path.join(log_folder, 'log_test.txt')
+        log_file = os.path.join(log_folder, f'log_test_{snapshot_name}.txt')
     else:
         log_folder = './test_log/test_log_' + args.exp
         os.makedirs(log_folder, exist_ok=True)
