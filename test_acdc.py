@@ -113,9 +113,13 @@ if __name__ == "__main__":
     }
     dataset_name = args.dataset
     args.num_classes = dataset_config[dataset_name]['num_classes']
-    args.volume_path = dataset_config[dataset_name]['volume_path']
+    # Only set volume_path if using default path (not provided via command line)
+    if args.volume_path == '../data/Synapse/test_vol_h5':
+        args.volume_path = dataset_config[dataset_name]['volume_path']
     args.Dataset = dataset_config[dataset_name]['Dataset']
-    args.list_dir = dataset_config[dataset_name]['list_dir']
+    # Only set list_dir if using default path (not provided via command line)
+    if args.list_dir == './lists/lists_Synapse':
+        args.list_dir = dataset_config[dataset_name]['list_dir']
     args.z_spacing = dataset_config[dataset_name]['z_spacing']
     args.is_pretrain = True
 
