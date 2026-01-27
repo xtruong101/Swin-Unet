@@ -48,6 +48,7 @@ parser.add_argument('--deterministic', type=int,  default=1, help='whether use d
 parser.add_argument('--base_lr', type=float,  default=0.01, help='segmentation network learning rate')
 parser.add_argument('--seed', type=int, default=1234, help='random seed')
 parser.add_argument('--vit_patches_size', type=int, default=16, help='vit_patches_size, default is 16')
+parser.add_argument('--model_path', type=str, default=None, help='path to model checkpoint')
 args = parser.parse_args()
 
 
@@ -133,8 +134,14 @@ if __name__ == "__main__":
 
     net = ViT_seg(config, img_size=args.img_size, num_classes=args.num_classes).cuda()
 
-    snapshot = os.path.join(snapshot_path, 'best_model.pth')
-    if not os.path.exists(snapshot): snapshot = snapshot.replace('best_model', 'epoch_'+str(args.max_epochs-1))
+    # Use custom model path if provided, otherwise use default path
+    if args.model_path:
+        snapshot = args.model_path
+    else:
+        snapshot = os.path.join(snapshot_path, 'best_model.pth')
+        if not os.path.exists(snapshot): snapshot = snapshot.replace('best_model', 'epoch_'+str(args.max_epochs-1))
+    
+    logging.info(f"Loading model from: {snapshot}")
     net.load_state_dict(torch.load(snapshot))
     snapshot_name = snapshot_path.split('/')[-1]
 
