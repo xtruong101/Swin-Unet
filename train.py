@@ -61,8 +61,19 @@ parser.add_argument("--num_workers", default=8, type=int)
 parser.add_argument("--eval_interval", default=1, type=int)
 
 args = parser.parse_args()
+
+
+def resolve_output_dir(output_dir: str | None) -> str:
+    if output_dir:
+        return output_dir
+    if os.environ.get("KAGGLE_URL_BASE") or os.path.exists("/kaggle/working"):
+        return "/kaggle/working/model"
+    return "./model"
+
+
 if args.dataset == "Synapse":
     args.root_path = os.path.join(args.root_path, "train_npz")
+args.output_dir = resolve_output_dir(args.output_dir)
 config = get_config(args)
 
 if __name__ == "__main__":

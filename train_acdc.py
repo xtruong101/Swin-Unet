@@ -45,6 +45,14 @@ parser.add_argument('--n_skip', type=int,
 args = parser.parse_args()
 
 
+def resolve_output_dir(output_dir: str | None) -> str:
+    if output_dir and output_dir != "../model":
+        return output_dir
+    if os.environ.get("KAGGLE_URL_BASE") or os.path.exists("/kaggle/working"):
+        return "/kaggle/working/model"
+    return "./model"
+
+
 if __name__ == "__main__":
     # Load config
     _update_config_from_file(config, args.cfg)
@@ -83,6 +91,7 @@ if __name__ == "__main__":
         args.root_path = dataset_config[dataset_name]['root_path']
     if '--list_dir' not in sys.argv:
         args.list_dir = dataset_config[dataset_name]['list_dir']
+    args.output_dir = resolve_output_dir(args.output_dir)
     args.is_pretrain = True
     args.exp = 'TU_' + dataset_name + str(args.img_size)
     snapshot_path = "{}/{}/{}".format(args.output_dir, args.exp, 'TU')
