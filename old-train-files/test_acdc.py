@@ -64,20 +64,13 @@ def inference(args, model, test_save_path=None):
         metric_i = test_single_volume(image, label, model, classes=args.num_classes, patch_size=[args.img_size, args.img_size],
                                       test_save_path=test_save_path, case=case_name, z_spacing=args.z_spacing)
         metric_list += np.array(metric_i)
-        logging.info('idx %d case %s mean_dice %f mean_hd95 %f mean_precision %f mean_recall %f' % (
-            i_batch, case_name,
-            np.mean(metric_i, axis=0)[0], np.mean(metric_i, axis=0)[1],
-            np.mean(metric_i, axis=0)[2], np.mean(metric_i, axis=0)[3]))
+        logging.info('idx %d case %s mean_dice %f mean_hd95 %f' % (i_batch, case_name, np.mean(metric_i, axis=0)[0], np.mean(metric_i, axis=0)[1]))
     metric_list = metric_list / len(db_test)
     for i in range(1, args.num_classes):
-        logging.info('Mean class %d mean_dice %f mean_hd95 %f mean_precision %f mean_recall %f' % (
-            i, metric_list[i-1][0], metric_list[i-1][1], metric_list[i-1][2], metric_list[i-1][3]))
+        logging.info('Mean class %d mean_dice %f mean_hd95 %f' % (i, metric_list[i-1][0], metric_list[i-1][1]))
     performance = np.mean(metric_list, axis=0)[0]
     mean_hd95 = np.mean(metric_list, axis=0)[1]
-    mean_precision = np.mean(metric_list, axis=0)[2]
-    mean_recall = np.mean(metric_list, axis=0)[3]
-    logging.info('Testing performance in best val model: mean_dice : %f mean_hd95 : %f mean_precision : %f mean_recall : %f' % (
-        performance, mean_hd95, mean_precision, mean_recall))
+    logging.info('Testing performance in best val model: mean_dice : %f mean_hd95 : %f' % (performance, mean_hd95))
     return "Testing Finished!"
 
 

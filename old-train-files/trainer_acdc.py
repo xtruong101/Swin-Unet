@@ -128,29 +128,21 @@ def trainer_acdc(args, model, snapshot_path):
                                       metric_list[class_i, 0], iter_num)
                     writer.add_scalar('info/val_{}_hd95'.format(class_i + 1),
                                       metric_list[class_i, 1], iter_num)
-                    writer.add_scalar('info/val_{}_precision'.format(class_i + 1),
-                                      metric_list[class_i, 2], iter_num)
-                    writer.add_scalar('info/val_{}_recall'.format(class_i + 1),
-                                      metric_list[class_i, 3], iter_num)
 
                 performance = np.mean(metric_list, axis=0)[0]
+
                 mean_hd95 = np.mean(metric_list, axis=0)[1]
-                mean_precision = np.mean(metric_list, axis=0)[2]
-                mean_recall = np.mean(metric_list, axis=0)[3]
                 writer.add_scalar('info/val_mean_dice', performance, iter_num)
                 writer.add_scalar('info/val_mean_hd95', mean_hd95, iter_num)
-                writer.add_scalar('info/val_mean_precision', mean_precision, iter_num)
-                writer.add_scalar('info/val_mean_recall', mean_recall, iter_num)
 
                 if performance > best_performance:
                     best_iteration, best_performance, best_hd95 = iter_num, performance, mean_hd95
                     save_best = os.path.join(snapshot_path, 'best_model.pth')
                     torch.save(model.state_dict(), save_best)
-                    logging.info('Best model | iteration %d : mean_dice : %f mean_hd95 : %f mean_precision : %f mean_recall : %f' % (
-                        iter_num, performance, mean_hd95, mean_precision, mean_recall))
+                    logging.info('Best model | iteration %d : mean_dice : %f mean_hd95 : %f' % (
+                    iter_num, performance, mean_hd95))
 
-                logging.info('iteration %d : mean_dice : %f mean_hd95 : %f mean_precision : %f mean_recall : %f' % (
-                    iter_num, performance, mean_hd95, mean_precision, mean_recall))
+                logging.info('iteration %d : mean_dice : %f mean_hd95 : %f' % (iter_num, performance, mean_hd95))
                 model.train()
 
             # Note: Validation happens every 500 iterations if needed
@@ -178,21 +170,17 @@ def trainer_synapse(args, model, snapshot_path):
     base_lr = args.base_lr
     num_classes = args.num_classes
     batch_size = args.batch_size * args.n_gpu
+    # max_iterations = args.max_iterations
     db_train = Synapse_dataset(base_dir=args.root_path, list_dir=args.list_dir, split="train",
                                transform=transforms.Compose(
                                    [RandomGenerator(output_size=[args.img_size, args.img_size])]))
-    db_val = Synapse_dataset(base_dir=args.root_path, list_dir=args.list_dir, split="val",
-                             transform=transforms.Compose(
-                                 [RandomGenerator(output_size=[args.img_size, args.img_size])]))
     print("The length of train set is: {}".format(len(db_train)))
-    print("The length of val set is: {}".format(len(db_val)))
 
     def worker_init_fn(worker_id):
         random.seed(args.seed + worker_id)
 
     trainloader = DataLoader(db_train, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True,
                              worker_init_fn=worker_init_fn)
-    valloader = DataLoader(db_val, batch_size=1, shuffle=False, num_workers=1)
     if args.n_gpu > 1:
         model = nn.DataParallel(model)
     model.train()
@@ -202,7 +190,7 @@ def trainer_synapse(args, model, snapshot_path):
     writer = SummaryWriter(snapshot_path + '/log')
     iter_num = 0
     max_epoch = args.max_epochs
-    max_iterations = args.max_epochs * len(trainloader)
+    max_iterations = args.max_epochs * len(trainloader)  # max_epoch = max_iterations // len(trainloader) + 1
     logging.info("{} iterations per epoch. {} max iterations ".format(len(trainloader), max_iterations))
     best_performance = 0.0
     iterator = tqdm(range(max_epoch), ncols=70)
@@ -237,46 +225,7 @@ def trainer_synapse(args, model, snapshot_path):
                 labs = label_batch[1, ...].unsqueeze(0) * 50
                 writer.add_image('train/GroundTruth', labs, iter_num)
 
-            if iter_num > 0 and iter_num % 500 == 0:
-                model.eval()
-                metric_list = 0.0
-                for i_batch, sampled_batch in enumerate(valloader):
-                    image, label = sampled_batch["image"], sampled_batch["label"]
-                    metric_i = test_single_volume(image, label, model, classes=num_classes,
-                                                  patch_size=[args.img_size, args.img_size])
-                    metric_list += np.array(metric_i)
-                metric_list = metric_list / len(db_val)
-                for class_i in range(num_classes - 1):
-                    writer.add_scalar('info/val_{}_dice'.format(class_i + 1),
-                                      metric_list[class_i, 0], iter_num)
-                    writer.add_scalar('info/val_{}_hd95'.format(class_i + 1),
-                                      metric_list[class_i, 1], iter_num)
-                    writer.add_scalar('info/val_{}_precision'.format(class_i + 1),
-                                      metric_list[class_i, 2], iter_num)
-                    writer.add_scalar('info/val_{}_recall'.format(class_i + 1),
-                                      metric_list[class_i, 3], iter_num)
-
-                performance = np.mean(metric_list, axis=0)[0]
-                mean_hd95 = np.mean(metric_list, axis=0)[1]
-                mean_precision = np.mean(metric_list, axis=0)[2]
-                mean_recall = np.mean(metric_list, axis=0)[3]
-                writer.add_scalar('info/val_mean_dice', performance, iter_num)
-                writer.add_scalar('info/val_mean_hd95', mean_hd95, iter_num)
-                writer.add_scalar('info/val_mean_precision', mean_precision, iter_num)
-                writer.add_scalar('info/val_mean_recall', mean_recall, iter_num)
-
-                if performance > best_performance:
-                    best_performance = performance
-                    save_best = os.path.join(snapshot_path, 'best_model.pth')
-                    torch.save(model.state_dict(), save_best)
-                    logging.info('Best model | iteration %d : mean_dice : %f mean_hd95 : %f mean_precision : %f mean_recall : %f' % (
-                        iter_num, performance, mean_hd95, mean_precision, mean_recall))
-
-                logging.info('iteration %d : mean_dice : %f mean_hd95 : %f mean_precision : %f mean_recall : %f' % (
-                    iter_num, performance, mean_hd95, mean_precision, mean_recall))
-                model.train()
-
-        save_interval = 50
+        save_interval = 50  # int(max_epoch/6)
         if epoch_num > int(max_epoch / 2) and (epoch_num + 1) % save_interval == 0:
             save_mode_path = os.path.join(snapshot_path, 'epoch_' + str(epoch_num) + '.pth')
             torch.save(model.state_dict(), save_mode_path)
